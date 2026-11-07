@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>京都観光スポットセレクター</title>
+  <style>
+    :root {
+      --ink: #29251f;
+      --muted: #746e66;
+      --paper: #faf8f3;
+      --accent: #9b493b;
+      --want-color: #426c65;
+      --must-chart: #e53935;
+      --want-chart: #4caf50;
+      --line: #e8e1d7;
+      --card-bg: #ffffff;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    }
+
+    /* ヘッダー・ナビゲーション */
+    header {
+      background: #47352f;
+      color: white;
+      padding: 12px max(18px, calc((100vw - 1120px)/2)) 10px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    h1 {
+      font-size: clamp(18px, 3vw, 24px);
+      margin: 0;
+      font-weight: 700;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 5px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .tab-btn.active {
+      background: white;
+      color: #47352f;
+      font-weight: bold;
+    }
+
+    header p {
+      margin: 4px 0 0;
+      color: #eee0d8;
+      font-size: 12px;
+    }
+
+    main {
+      max-width: 1120px;
+      margin: auto;
+      padding: 12px;
+    }
+
+    /* ページの切り替え */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Sticky コントロール (コンパクト化) */
+    .sticky {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(250, 248, 243, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 13px;
+    }
+
+    .stat b {
+      font-size: 16px;
+      color: var(--accent);
+      margin-right: 2px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    input, select, button {
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+      background: white;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    input { flex: 1; min-width: 140px; }
+    button { cursor: pointer; transition: background 0.2s; }
+    button:hover { border-color: var(--accent); }
+    .reset { color: #8b3e32; border-color: #eccac5; }
+    .reset:hover { background: #fdf3f2; }
+
+    .area-title {
+      font-size: 20px;
+      margin: 26px 0 14px;
+      border-left: 4px solid var(--accent);
+      padding-left: 10px;
+      font-weight: bold;
+    }
+
+    /* グリッドレイアウト修復 */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(56, 38, 26, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .photo {
+      height: 142px;
+      background: linear-gradient(135deg, #e8e0d5, #d6c9b9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo .placeholder {
+      font-size: 34px;
+      color: #8b796a;
+    }
+
+    .cardbody {
+      padding: 11px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    .name {
+      font-weight: 700;
+      line-height: 1.45;
+      min-height: 40px;
+    }
+
+    .sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 4px 0 10px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 7px;
+    }
+
+    .pick {
+      flex: 1;
+      padding: 8px 5px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+
+    .pick.must[aria-pressed="true"] {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .pick.want[aria-pressed="true"] {
+      background: var(--want-color);
+      color: white;
+      border-color: var(--want-color);
+    }
+
+    .pick:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* 結果・送信セクション */
+    .result-section {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 30px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      font-weight: bold;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: #f0ede6;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 12px 20px;
+      border-radius: 10px;
+    }
+
+    #result {
+      white-space: pre-wrap;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* メッセージ通知 */
+    .status-msg {
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status-msg.success {
+      background: #e6f4ea;
+      color: #137333;
+      border: 1px solid #ceead6;
+      display: block;
+    }
+
+    .status-msg.error {
+      background: #fce8e6;
+      color: #c5221f;
+      border: 1px solid #fad2cf;
+      display: block;
+    }
+
+    /* 集計ページ (横向き棒グラフ) */
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chart-container {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 24px 16px;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+      justify-content: center;
+      font-size: 13px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-box {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+    }
+
+    .chart-wrapper-horizontal {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .horiz-bar-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border-bottom: 1px dashed var(--line);
+      padding-bottom: 8px;
+    }
+
+    .horiz-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .horiz-spot-name {
+      color: var(--ink);
+    }
+
+    .horiz-score-info {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: normal;
+    }
+
+    .horiz-bar-track {
+      width: 100%;
+      height: 22px;
+      background: #f0ede8;
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      position: relative;
+    }
+
+    .horiz-bar-segment {
+      height: 100%;
+      transition: width 0.4s ease;
+    }
+
+    .horiz-bar-must {
+      background: var(--must-chart);
+    }
+
+    .horiz-bar-want {
+      background: var(--want-chart);
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 12px;
+      padding: 25px 0 40px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 12px; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+      .photo { height: 112px; }
+      .cardbody { padding: 8px; }
+      .name { font-size: 13px; min-height: 36px; }
+      .pick { font-size: 11px; padding: 6px 3px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <h1>京都観光スポットセレクター</h1>
+    <div class="nav-tabs">
+      <button class="tab-btn active" id="tabSelectorBtn" onclick="switchPage('selector')">選択</button>
+      <button class="tab-btn" id="tabStatsBtn" onclick="switchPage('stats')">集計グラフ</button>
+    </div>
+  </div>
+  <p>マスト最大3 / 行きたい最大15</p>
+</header>
+
+<main>
+  <!-- 1. スポット選択ページ -->
+  <div id="selectorPage" class="page active">
+    <section class="sticky">
+      <div class="stats">
+        <div class="stat">★ マスト <b id="mustCount">0</b>/3</div>
+        <div class="stat">♡ 行きたい <b id="wantCount">0</b>/15</div>
+        <div class="stat">候補 <b>56</b>か所</div>
+      </div>
+      <div class="controls">
+        <input id="search" placeholder="スポット名やエリア名で検索">
+        <select id="area"><option value="">すべてのエリア</option></select>
+        <select id="filter">
+          <option value="all">すべて表示</option>
+          <option value="selected">選択した場所だけ</option>
+          <option value="unselected">未選択だけ</option>
+        </select>
+        <button class="reset" id="reset">選択をリセット</button>
+      </div>
+    </section>
+
+    <!-- スポット一覧描画領域 -->
+    <div id="list"></div>
+
+    <section class="result-section">
+      <h2 style="margin-top:0; font-size:18px;">選択結果の保存・送信</h2>
+      <div class="btn-group">
+        <button id="sendFirebase" class="btn-primary">Firebaseに送信</button>
+        <button id="copy" class="btn-secondary">選択結果をコピー</button>
+      </div>
+      
+      <div id="statusMsg" class="status-msg"></div>
+
+      <h3 style="font-size:14px; margin:16px 0 8px; color:var(--muted);">プレビュー:</h3>
+      <div id="result">まだ選択されていません。</div>
+    </section>
+  </div>
+
+  <!-- 2. 集計結果ページ (横向き棒グラフ) -->
+  <div id="statsPage" class="page">
+    <div class="chart-header">
+      <div>
+        <h2 style="margin:0; font-size:20px;">みんなの選択集計（リアルタイム）</h2>
+        <p style="margin:4px 0 0; font-size:12px; color:var(--muted);">※マスト＝2pt（赤）、行きたい＝1pt（緑）で換算した総ポイント順に並んでいます。グラフ上は1票＝1幅です。</p>
+      </div>
+      <button id="refreshStats" class="btn-secondary" style="padding:6px 12px; font-size:13px;">最新データに更新</button>
+    </div>
+
+    <div class="chart-container">
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-box" style="background:var(--must-chart)"></div> ★ マスト (2Pt/票)</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--want-chart)"></div> ♡ 行きたい (1Pt/票)</div>
+      </div>
+      <div id="chartLoading" style="text-align:center; padding:40px; color:var(--muted);">データを読み込み中...</div>
+      <div id="chartWrapper" class="chart-wrapper-horizontal" style="display:none;">
+        <!-- 横向き棒グラフ要素がここに動的挿入されます -->
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    写真はWikipediaのページ画像を読み込みます。写真が取得できないスポットは代替表示になります。画像表示にはインターネット接続が必要です。選択内容はこのブラウザ内に保存されます。<br>
+    ※冬季運休となる嵯峨野トロッコ列車は候補から除外済み。
+  </footer>
+</main>
+
+<!-- Firebase SDK モジュール読み込み -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDocs, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+  // Firebase 設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyCuv_sboEVhMNKZRovKjBVrsdVuF7-qMfk",
+    authDomain: "kyoto-trip-62951.firebaseapp.com",
+    projectId: "kyoto-trip-62951",
+    storageBucket: "kyoto-trip-62951.firebasestorage.app",
+    messagingSenderId: "706508676462",
+    appId: "1:706508676462:web:ca064f797a4a9280fb757f",
+    measurementId: "G-DHT9316CY4"
+  };
+
+  // アプリの初期化
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // 端末識別用IDの発行＆ローカルストレージ保存
+  let deviceId = localStorage.getItem('kyoto_device_id');
+  if (!deviceId) {
+    deviceId = 'dev_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+    localStorage.setItem('kyoto_device_id', deviceId);
+  }
+
+  // グローバル関数として公開
+  window.db = db;
+  window.deviceId = deviceId;
+  window.setDoc = setDoc;
+  window.doc = doc;
+  window.getDocs = getDocs;
+  window.collection = collection;
+  window.serverTimestamp = serverTimestamp;
+</script>
+
+<script>
+// 56スポット情報データ定義
+const spots = [
+  {"area": "東山・祇園", "name": "清水寺・清水坂・産寧坂・二年坂", "title": "清水寺", "search": "清水寺 清水坂 産寧坂 二年坂"},
+  {"area": "東山・祇園", "name": "八坂の塔・法観寺", "title": "法観寺", "search": "八坂の塔 法観寺"},
+  {"area": "東山・祇園", "name": "高台寺・圓徳院", "title": "高台寺", "search": "高台寺 圓徳院"},
+  {"area": "東山・祇園", "name": "知恩院", "title": "知恩院", "search": "知恩院"},
+  {"area": "東山・祇園", "name": "青蓮院門跡", "title": "青蓮院", "search": "青蓮院門跡"},
+  {"area": "東山・祇園", "name": "円山公園", "title": "円山公園", "search": "京都 円山公園"},
+  {"area": "東山・祇園", "name": "安井金比羅宮", "title": "安井金比羅宮", "search": "安井金比羅宮"},
+  {"area": "東山・祇園", "name": "祇園白川・巽橋", "title": "祇園白川", "search": "祇園白川 巽橋"},
+  {"area": "東山・祇園", "name": "花見小路", "title": "花見小路", "search": "京都 花見小路"},
+  {"area": "岡崎・蹴上", "name": "南禅寺・水路閣", "title": "南禅寺", "search": "南禅寺 水路閣"},
+  {"area": "岡崎・蹴上", "name": "蹴上インクライン", "title": "蹴上インクライン", "search": "蹴上インクライン"},
+  {"area": "岡崎・蹴上", "name": "平安神宮・神苑", "title": "平安神宮", "search": "平安神宮 神苑"},
+  {"area": "岡崎・蹴上", "name": "哲学の道", "title": "哲学の道", "search": "京都 哲学の道"},
+  {"area": "岡崎・蹴上", "name": "銀閣寺", "title": "慈照寺", "search": "銀閣寺 慈照寺"},
+  {"area": "岡崎・蹴上", "name": "京都府立植物園", "title": "京都府立植物園", "search": "京都府立植物園"},
+  {"area": "伏見・南部", "name": "伏見稲荷大社", "title": "伏見稲荷大社", "search": "伏見稲荷大社"},
+  {"area": "伏見・南部", "name": "伏見十石舟", "title": "伏見十石舟", "search": "伏見十石舟"},
+  {"area": "伏見・南部", "name": "東福寺", "title": "東福寺", "search": "東福寺 京都"},
+  {"area": "京都中心部", "name": "京都御所・京都御苑・閑院宮邸跡・拾翠亭", "title": "京都御所", "search": "京都御所 京都御苑 拾翠亭"},
+  {"area": "京都中心部", "name": "錦市場・錦天満宮", "title": "錦市場", "search": "錦市場 錦天満宮"},
+  {"area": "京都中心部", "name": "本能寺", "title": "本能寺", "search": "本能寺 京都"},
+  {"area": "京都中心部", "name": "六角堂", "title": "頂法寺", "search": "六角堂 頂法寺 京都"},
+  {"area": "京都中心部", "name": "鴨川デルタ", "title": "鴨川デルタ", "search": "鴨川デルタ 京都"},
+  {"area": "京都中心部", "name": "二条陣屋", "title": "二条陣屋", "search": "二条陣屋 京都"},
+  {"area": "京都中心部", "name": "神泉苑", "title": "神泉苑", "search": "神泉苑 京都"},
+  {"area": "京都中心部", "name": "東寺", "title": "東寺", "search": "東寺 五重塔 京都"},
+  {"area": "京都中心部", "name": "西本願寺", "title": "西本願寺", "search": "西本願寺 京都"},
+  {"area": "京都中心部", "name": "東本願寺", "title": "東本願寺", "search": "東本願寺 京都"},
+  {"area": "金閣寺・衣笠", "name": "金閣寺", "title": "鹿苑寺", "search": "金閣寺 京都"},
+  {"area": "金閣寺・衣笠", "name": "龍安寺", "title": "龍安寺", "search": "龍安寺 石庭"},
+  {"area": "金閣寺・衣笠", "name": "仁和寺", "title": "仁和寺", "search": "仁和寺 京都"},
+  {"area": "嵐山・嵯峨野", "name": "渡月橋", "title": "渡月橋", "search": "嵐山 渡月橋"},
+  {"area": "嵐山・嵯峨野", "name": "天龍寺", "title": "天龍寺", "search": "天龍寺 曹源池庭園"},
+  {"area": "嵐山・嵯峨野", "name": "竹林の小径・野宮神社", "title": "野宮神社", "search": "嵐山 竹林の小径 野宮神社"},
+  {"area": "嵐山・嵯峨野", "name": "大河内山荘庭園", "title": "大河内山荘", "search": "大河内山荘庭園"},
+  {"area": "嵐山・嵯峨野", "name": "常寂光寺", "title": "常寂光寺", "search": "常寂光寺 京都"},
+  {"area": "嵐山・嵯峨野", "name": "二尊院", "title": "二尊院", "search": "二尊院 京都"},
+  {"area": "嵐山・嵯峨野", "name": "祇王寺", "title": "祇王寺", "search": "祇王寺 京都"},
+  {"area": "嵐山・嵯峨野", "name": "落柿舎", "title": "落柿舎", "search": "落柿舎 京都"},
+  {"area": "嵐山・嵯峨野", "name": "清凉寺", "title": "清凉寺", "search": "清凉寺 嵯峨"},
+  {"area": "嵐山・嵯峨野", "name": "あだし野念仏寺", "title": "あだし野念仏寺", "search": "あだし野念仏寺"},
+  {"area": "嵐山・嵯峨野", "name": "愛宕念仏寺", "title": "愛宕念仏寺", "search": "愛宕念仏寺"},
+  {"area": "嵐山・嵯峨野", "name": "嵐山公園・亀山地区", "title": "嵐山公園", "search": "嵐山公園 亀山地区"},
+  {"area": "嵐山・嵯峨野", "name": "大覚寺・大沢池", "title": "大覚寺", "search": "大覚寺 大沢池"},
+  {"area": "嵐山・嵯峨野", "name": "嵯峨鳥居本の町並み", "title": "嵯峨鳥居本", "search": "嵯峨鳥居本 町並み"},
+  {"area": "嵐山・嵯峨野", "name": "嵐山モンキーパーク", "title": "嵐山モンキーパーク", "search": "嵐山モンキーパークいわたやま"},
+  {"area": "嵐山・嵯峨野", "name": "大悲閣千光寺", "title": "大悲閣千光寺", "search": "大悲閣千光寺 京都"},
+  {"area": "宇治", "name": "平等院", "title": "平等院", "search": "平等院 鳳凰堂"},
+  {"area": "宇治", "name": "宇治上神社", "title": "宇治上神社", "search": "宇治上神社"},
+  {"area": "宇治", "name": "宇治神社", "title": "宇治神社", "search": "宇治神社"},
+  {"area": "宇治", "name": "宇治川・朝霧橋・宇治公園・塔の島・橘島", "title": "宇治公園", "search": "宇治川 朝霧橋 塔の島 橘島"},
+  {"area": "宇治", "name": "興聖寺", "title": "興聖寺", "search": "宇治 興聖寺 琴坂"},
+  {"area": "宇治", "name": "萬福寺", "title": "萬福寺", "search": "黄檗 萬福寺"},
+  {"area": "宇治", "name": "三室戸寺", "title": "三室戸寺", "search": "三室戸寺 京都"},
+  {"area": "宇治", "name": "対鳳庵", "title": "対鳳庵", "search": "宇治 対鳳庵 茶室"},
+  {"area": "宇治", "name": "中村藤吉本店", "title": "中村藤吉本店", "search": "中村藤吉本店 宇治"}
+];
+
+// 状態管理
+const state = JSON.parse(localStorage.getItem('kyotoSpotChoicesV3') || '{}');
+const must = new Set(state.must || []);
+const want = new Set(state.want || []);
+
+const areas = [...new Set(spots.map(s => s.area))];
+const areaSel = document.getElementById('area');
+areas.forEach(a => {
+  let o = document.createElement('option');
+  o.value = a;
+  o.textContent = a;
+  areaSel.append(o);
+});
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function save() {
+  localStorage.setItem('kyotoSpotChoicesV3', JSON.stringify({
+    must: [...must],
+    want: [...want]
+  }));
+  render();
+}
+
+function resultText() {
+  let m = spots.filter(s => must.has(s.name)).map(s => '★ ' + s.name);
+  let w = spots.filter(s => want.has(s.name)).map(s => '♡ ' + s.name);
+  return [...m, ...w].join('\n') || 'まだ選択されていません。';
+}
+
+function render() {
+  document.getElementById('mustCount').textContent = must.size;
+  document.getElementById('wantCount').textContent = want.size;
+  document.getElementById('result').textContent = resultText();
+
+  let q = document.getElementById('search').value.trim().toLowerCase();
+  let a = areaSel.value;
+  let f = document.getElementById('filter').value;
+  let html = '';
+  let currentArea = null;
+
+  spots.forEach((s, i) => {
+    let chosen = must.has(s.name) || want.has(s.name);
+    
+    if ((a && s.area !== a) || 
+        (q && !s.name.toLowerCase().includes(q) && !s.area.toLowerCase().includes(q)) || 
+        (f === 'selected' && !chosen) || 
+        (f === 'unselected' && chosen)) {
+      return;
+    }
+
+    if (s.area !== currentArea) {
+      if (currentArea !== null) {
+        html += '</div>';
+      }
+      currentArea = s.area;
+      html += `<h2 class="area-title">${esc(s.area)}</h2><div class="grid">`;
+    }
+
+    let m = must.has(s.name);
+    let w = want.has(s.name);
+
+    html += `
+      <article class="card">
+        <div class="photo" id="photo${i}">
+          <span class="placeholder">📷</span>
+        </div>
+        <div class="cardbody">
+          <div class="name">${esc(s.name)}</div>
+          <div class="sub">${esc(s.area)}</div>
+          <div class="actions">
+            <button class="pick must" data-kind="must" data-i="${i}" aria-pressed="${m}" ${!m && must.size >= 3 ? 'disabled' : ''}>★ マスト</button>
+            <button class="pick want" data-kind="want" data-i="${i}" aria-pressed="${w}" ${!w && want.size >= 15 ? 'disabled' : ''}>♡ 行きたい</button>
+          </div>
+        </div>
+      </article>
+    `;
+  });
+
+  if (currentArea !== null) {
+    html += '</div>';
+  }
+
+  document.getElementById('list').innerHTML = html || '<div style="padding:20px; text-align:center; color:var(--muted);">条件に一致するスポットが見つかりません</div>';
+
+  document.querySelectorAll('.pick').forEach(b => {
+    b.addEventListener('click', () => {
+      let idx = +b.dataset.i;
+      let s = spots[idx];
+      let set = b.dataset.kind === 'must' ? must : want;
+      let other = b.dataset.kind === 'must' ? want : must;
+
+      if (set.has(s.name)) {
+        set.delete(s.name);
+      } else {
+        if (set.size >= (b.dataset.kind === 'must' ? 3 : 15)) return;
+        set.add(s.name);
+        other.delete(s.name);
+      }
+      save();
+    });
+  });
+
+  loadImages();
+}
+
+async function loadImages() {
+  const visible = [...document.querySelectorAll('.card')];
+  if (visible.length === 0) return;
+
+  const titles = visible.map(c => {
+    let idx = +c.querySelector('[data-i]').dataset.i;
+    return spots[idx].title;
+  });
+
+  for (let start = 0; start < titles.length; start += 40) {
+    let batch = titles.slice(start, start + 40);
+    try {
+      let url = 'https://ja.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&piprop=thumbnail&pithumbsize=640&titles=' + encodeURIComponent(batch.join('|')) + '&origin=*';
+      let r = await fetch(url);
+      if (!r.ok) throw Error('network error');
+      let j = await r.json();
+      let pages = Object.values(j.query.pages || {});
+      let map = {};
+      pages.forEach(p => {
+        if (p.thumbnail) map[p.title] = p.thumbnail.source;
+      });
+
+      batch.forEach((t, k) => {
+        let imgUrl = map[t];
+        if (!imgUrl) return;
+        let card = visible[start + k];
+        if (!card) return;
+        let box = card.querySelector('.photo');
+        if (!box) return;
+        box.innerHTML = `<img loading="lazy" alt="${esc(t)}の写真" src="${imgUrl}">`;
+      });
+    } catch (e) {
+      // エラー時はプレースホルダー維持
+    }
+  }
+}
+
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  if (page === 'selector') {
+    document.getElementById('selectorPage').classList.add('active');
+    document.getElementById('tabSelectorBtn').classList.add('active');
+  } else {
+    document.getElementById('statsPage').classList.add('active');
+    document.getElementById('tabStatsBtn').classList.add('active');
+    fetchAndRenderStats();
+  }
+}
+
+function showMessage(msg, isSuccess = true) {
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg ' + (isSuccess ? 'success' : 'error');
+}
+
+// Firebaseへの送信
+document.getElementById('sendFirebase').addEventListener('click', async () => {
+  const totalCount = must.size + want.size;
+
+  if (totalCount === 0) {
+    showMessage('スポットが選択されていません。「★ マスト」または「♡ 行きたい」を選択してください。', false);
+    return;
+  }
+
+  const btn = document.getElementById('sendFirebase');
+  btn.disabled = true;
+  btn.textContent = '送信中...';
+  showMessage('');
+
+  const mustList = spots.filter(s => must.has(s.name)).map(s => ({ name: s.name, area: s.area }));
+  const wantList = spots.filter(s => want.has(s.name)).map(s => ({ name: s.name, area: s.area }));
+
+  const payload = {
+    mustSpots: mustList,
+    wantSpots: wantList,
+    mustCount: must.size,
+    wantCount: want.size,
+    updatedAt: window.serverTimestamp ? window.serverTimestamp() : new Date().toISOString()
+  };
+
+  try {
+    if (!window.db || !window.setDoc) {
+      throw new Error("Firebase SDKの初期化処理が完了していません。ネット環境等を確認してください。");
+    }
+
+    const docRef = window.doc(window.db, 'kyotoTripSelections', window.deviceId);
+    await window.setDoc(docRef, payload, { merge: true });
+
+    showMessage('送信完了しました！最新の選択内容が保存されました。', true);
+  } catch (err) {
+    console.error(err);
+    showMessage('送信に失敗しました: ' + err.message, false);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Firebaseに送信';
+  }
+});
+
+// 集計結果の読み込みと横方向棒グラフの描画（マスト2Pt換算・票数順ソート・マスト赤/行きたい緑）
+async function fetchAndRenderStats() {
+  const loading = document.getElementById('chartLoading');
+  const wrapper = document.getElementById('chartWrapper');
+  loading.style.display = 'block';
+  wrapper.style.display = 'none';
+
+  try {
+    if (!window.db || !window.getDocs) {
+      throw new Error("Firebase SDKが読み込まれていません。");
+    }
+
+    const colRef = window.collection(window.db, 'kyotoTripSelections');
+    const snapshot = await window.getDocs(colRef);
+
+    const statsData = spots.map(s => ({
+      name: s.name,
+      area: s.area,
+      must: 0,
+      want: 0,
+      totalVotes: 0,
+      points: 0
+    }));
+
+    const mapByName = {};
+    statsData.forEach(item => { mapByName[item.name] = item; });
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.mustSpots && Array.isArray(data.mustSpots)) {
+        data.mustSpots.forEach(item => {
+          const name = typeof item === 'string' ? item : item.name;
+          if (mapByName[name]) {
+            mapByName[name].must += 1;
+          }
+        });
+      }
+      if (data.wantSpots && Array.isArray(data.wantSpots)) {
+        data.wantSpots.forEach(item => {
+          const name = typeof item === 'string' ? item : item.name;
+          if (mapByName[name]) {
+            mapByName[name].want += 1;
+          }
+        });
+      }
+    });
+
+    statsData.forEach(item => {
+      item.totalVotes = item.must + item.want;
+      item.points = (item.must * 2) + item.want;
+    });
+
+    // 順位ソート：ポイント降順（同点の場合は総票数降順）
+    statsData.sort((a, b) => b.points - a.points || b.totalVotes - a.totalVotes);
+
+    let maxVotes = 1;
+    statsData.forEach(item => {
+      if (item.totalVotes > maxVotes) maxVotes = item.totalVotes;
+    });
+
+    let chartHtml = '';
+    statsData.forEach(item => {
+      const mustWidthPct = (item.must / maxVotes) * 100;
+      const wantWidthPct = (item.want / maxVotes) * 100;
+
+      chartHtml += `
+        <div class="horiz-bar-item">
+          <div class="horiz-label-row">
+            <span class="horiz-spot-name">${esc(item.name)} <small style="color:var(--muted); font-weight:normal;">(${esc(item.area)})</small></span>
+            <span class="horiz-score-info">
+              <b>${item.points} Pt</b> (★${item.must} / ♡${item.want})
+            </span>
+          </div>
+          <div class="horiz-bar-track">
+            <div class="horiz-bar-segment horiz-bar-must" style="width: ${mustWidthPct}%;" title="★ マスト: ${item.must}票"></div>
+            <div class="horiz-bar-segment horiz-bar-want" style="width: ${wantWidthPct}%;" title="♡ 行きたい: ${item.want}票"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    wrapper.innerHTML = chartHtml;
+    loading.style.display = 'none';
+    wrapper.style.display = 'flex';
+  } catch (err) {
+    console.error(err);
+    loading.textContent = 'データの読み込みに失敗しました: ' + err.message;
+  }
+}
+
+['search', 'area', 'filter'].forEach(id => {
+  document.getElementById(id).addEventListener(id === 'search' ? 'input' : 'change', render);
+});
+
+document.getElementById('reset').onclick = () => {
+  if (confirm('選択をすべて消しますか？')) {
+    must.clear();
+    want.clear();
+    save();
+    showMessage('');
+  }
+};
+
+document.getElementById('copy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(resultText());
+    document.getElementById('copy').textContent = 'コピーしました！';
+    setTimeout(() => document.getElementById('copy').textContent = '選択結果をコピー', 1600);
+  } catch (e) {
+    alert('コピーできませんでした。選択結果を長押ししてコピーしてください。');
+  }
+};
+
+document.getElementById('refreshStats').onclick = () => {
+  fetchAndRenderStats();
+};
+
+// 初期表示実行
+render();
+</script>
+
+</body>
+</html>
